@@ -28,6 +28,7 @@
     --color-low-bg: #ECEEF2;
     --color-success: #1F7A52;
     --color-success-bg: #E5F3EC;
+    --color-on-success: #FFFFFF;
     --color-warning: #A35B12;
     --color-warning-bg: #FCEEDC;
     --color-status-backlog: #5B6472;
@@ -69,6 +70,7 @@
     --color-low-bg: #232B3D;
     --color-success: #4CC38A;
     --color-success-bg: #123024;
+    --color-on-success: #0B1220;
     --color-warning: #E3A13D;
     --color-warning-bg: #3A2A10;
     --color-status-backlog: #9AA5BD;
@@ -667,6 +669,39 @@
   }
 
   /* ============================================================
+     CELEBRATION MODAL (shown when a task is moved to Done)
+     ============================================================ */
+  .celebration-modal {
+    max-width: 360px;
+    text-align: center;
+    border-top-color: var(--color-success);
+  }
+
+  .celebration-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto var(--space-4);
+    border-radius: 50%;
+    background: var(--color-success-bg);
+    color: var(--color-success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .celebration-icon svg { width: 28px; height: 28px; flex-shrink: 0; }
+
+  .celebration-modal h2 { font-size: 19px; margin-bottom: var(--space-2); }
+
+  .celebration-message {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+    margin-bottom: var(--space-5);
+  }
+
+  .celebration-message strong { color: var(--color-text); }
+
+  /* ============================================================
      TOASTS
      ============================================================ */
   .toast-region {
@@ -909,6 +944,20 @@
       <div class="form-actions" style="margin-top:var(--space-4);">
         <button type="button" class="btn btn-ghost" id="closeDetailModalBtn2" style="color:var(--color-text);border-color:var(--color-border);">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       CELEBRATION MODAL: shown when a task is moved to Done
+       ============================================================ -->
+  <div class="modal-overlay" id="celebrationModalOverlay" hidden>
+    <div class="modal celebration-modal" role="dialog" aria-modal="true" aria-labelledby="celebrationTitle">
+      <div class="celebration-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <h2 id="celebrationTitle">Nice work — task complete!</h2>
+      <p class="celebration-message" id="celebrationMessage"></p>
+      <button type="button" class="btn btn-primary" id="closeCelebrationBtn" style="background:var(--color-success);color:var(--color-on-success);">Nice! 🎉</button>
     </div>
   </div>
 
@@ -1221,8 +1270,10 @@
   function moveTask(taskId, newStatus) {
     const task = state.tasks.find((t) => t.id === taskId);
     if (!task || !STATUSES.some((s) => s.value === newStatus)) return;
+    const justCompleted = task.status !== 'Done' && newStatus === 'Done';
     task.status = newStatus;
     renderBoard();
+    if (justCompleted) openCelebration(task);
   }
 
   function deleteTask(taskId) {
@@ -1381,6 +1432,37 @@
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !document.getElementById('detailModalOverlay').hidden) closeTaskDetail();
+    });
+  }
+
+  /* ============================================================
+     CELEBRATION (shown when a task lands in the Done column)
+     ============================================================ */
+
+  function openCelebration(task) {
+    const msgEl = document.getElementById('celebrationMessage');
+    msgEl.textContent = '';
+    const strong = document.createElement('strong');
+    strong.textContent = task.title;
+    msgEl.append('You marked ', strong, ' as done. Keep up the momentum!');
+
+    document.getElementById('celebrationModalOverlay').hidden = false;
+    document.getElementById('closeCelebrationBtn').focus();
+  }
+
+  function closeCelebration() {
+    document.getElementById('celebrationModalOverlay').hidden = true;
+  }
+
+  function initCelebration() {
+    document.getElementById('closeCelebrationBtn').addEventListener('click', closeCelebration);
+
+    document.getElementById('celebrationModalOverlay').addEventListener('click', (e) => {
+      if (e.target.id === 'celebrationModalOverlay') closeCelebration();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !document.getElementById('celebrationModalOverlay').hidden) closeCelebration();
     });
   }
 
@@ -1589,6 +1671,7 @@
     initFilters();
     initAddTaskForm();
     initTaskDetail();
+    initCelebration();
     renderBoard();
   }
 
