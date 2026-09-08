@@ -706,7 +706,8 @@
      ============================================================ */
   .toast-region {
     position: fixed;
-    bottom: var(--space-5);
+    /* cleared to sit above the WhatsApp floating widget */
+    bottom: calc(var(--space-5) + 56px + var(--space-3));
     right: var(--space-5);
     display: flex;
     flex-direction: column;
@@ -729,6 +730,91 @@
 
   .toast-success { border-left-color: var(--color-success); }
   .toast-warning { border-left-color: var(--color-warning); }
+
+  /* ============================================================
+     WHATSAPP FLOATING WIDGET
+     ============================================================ */
+  .whatsapp-widget {
+    position: fixed;
+    bottom: var(--space-5);
+    right: var(--space-5);
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-3);
+  }
+
+  .whatsapp-fab {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #25D366;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px rgba(8, 14, 28, 0.3);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .whatsapp-fab:hover { transform: scale(1.06); box-shadow: 0 8px 20px rgba(8, 14, 28, 0.35); }
+  .whatsapp-fab svg { width: 26px; height: 26px; flex-shrink: 0; }
+
+  .whatsapp-panel {
+    width: 280px;
+    max-width: calc(100vw - 48px);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 16px 40px rgba(8, 14, 28, 0.28);
+    overflow: hidden;
+  }
+
+  .whatsapp-panel-header {
+    background: #25D366;
+    color: #fff;
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .whatsapp-panel-header .btn-icon { color: #fff; }
+  .whatsapp-panel-header .btn-icon:hover { background: rgba(255,255,255,0.18); }
+
+  .whatsapp-panel-hint {
+    padding: var(--space-3) var(--space-4) 0;
+    font-size: 12px;
+    color: var(--color-text-muted);
+  }
+
+  .whatsapp-suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4) var(--space-4);
+  }
+
+  .whatsapp-suggestion-btn {
+    text-align: left;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    font-size: 13px;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .whatsapp-suggestion-btn:hover { background: var(--color-primary-light); border-color: var(--color-primary); }
+
+  @media (max-width: 480px) {
+    .whatsapp-widget { right: var(--space-3); bottom: var(--space-3); }
+    .toast-region { right: var(--space-3); }
+  }
 
   [hidden] { display: none !important; }
 </style>
@@ -966,6 +1052,26 @@
        ============================================================ -->
   <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
 
+  <!-- ============================================================
+       WHATSAPP FLOATING WIDGET: opens a panel of suggested quick
+       messages. Demo mode — there is no live WhatsApp number wired
+       up, so a suggestion just confirms via toast (see notifyWhatsApp)
+       rather than opening a fabricated wa.me link.
+       ============================================================ -->
+  <div class="whatsapp-widget">
+    <div class="whatsapp-panel" id="whatsappPanel" hidden role="menu" aria-label="Suggested WhatsApp messages">
+      <div class="whatsapp-panel-header">
+        <span>IT PMO Support</span>
+        <button type="button" class="btn-icon" id="whatsappCloseBtn" aria-label="Close WhatsApp suggestions">✕</button>
+      </div>
+      <p class="whatsapp-panel-hint">Choose a quick message to start a chat:</p>
+      <div class="whatsapp-suggestions" id="whatsappSuggestions"></div>
+    </div>
+    <button type="button" id="whatsappToggleBtn" class="whatsapp-fab" aria-haspopup="true" aria-expanded="false" aria-label="Chat with IT PMO support on WhatsApp">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    </button>
+  </div>
+
 <script>
   'use strict';
 
@@ -1007,6 +1113,14 @@
   // date is within this many days and it isn't Done yet.
   const SLA_AT_RISK_DAYS = 3;
   const SLA_STATUSES = ['Breached', 'At Risk', 'On Track', 'Met'];
+
+  const WHATSAPP_SUGGESTIONS = [
+    'My task is blocked — who can help unblock it?',
+    'What is the SLA status on my project?',
+    'I need to update a task’s due date.',
+    'Who is the assignee for a task in Cybersecurity Uplift?',
+    'How do I report a critical incident?',
+  ];
 
   /* ============================================================
      UTILITY HELPERS
@@ -1518,6 +1632,53 @@
   }
 
   /* ============================================================
+     WHATSAPP WIDGET
+     Demo mode: there is no live WhatsApp number configured, so
+     picking a suggestion confirms via toast instead of opening a
+     fabricated wa.me link.
+     ============================================================ */
+
+  function setWhatsAppPanelOpen(open) {
+    document.getElementById('whatsappPanel').hidden = !open;
+    document.getElementById('whatsappToggleBtn').setAttribute('aria-expanded', String(open));
+  }
+
+  function initWhatsAppWidget() {
+    const suggestionsEl = document.getElementById('whatsappSuggestions');
+    suggestionsEl.innerHTML = WHATSAPP_SUGGESTIONS
+      .map((msg) => `<button type="button" class="whatsapp-suggestion-btn" role="menuitem">${escapeHtml(msg)}</button>`)
+      .join('');
+
+    const toggleBtn = document.getElementById('whatsappToggleBtn');
+    toggleBtn.addEventListener('click', () => {
+      setWhatsAppPanelOpen(document.getElementById('whatsappPanel').hidden);
+    });
+
+    document.getElementById('whatsappCloseBtn').addEventListener('click', () => setWhatsAppPanelOpen(false));
+
+    suggestionsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.whatsapp-suggestion-btn');
+      if (!btn) return;
+      setWhatsAppPanelOpen(false);
+      showToast(`Demo: WhatsApp message queued — “${btn.textContent}”`, 'success');
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !document.getElementById('whatsappPanel').hidden) {
+        setWhatsAppPanelOpen(false);
+        toggleBtn.focus();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      const panel = document.getElementById('whatsappPanel');
+      if (panel.hidden) return;
+      if (e.target.closest('.whatsapp-widget')) return;
+      setWhatsAppPanelOpen(false);
+    });
+  }
+
+  /* ============================================================
      FORMSUBMIT INTEGRATION
      A FormSubmit failure (network error, not-yet-activated address,
      etc.) must never break the board — always caught by the caller.
@@ -1672,6 +1833,7 @@
     initAddTaskForm();
     initTaskDetail();
     initCelebration();
+    initWhatsAppWidget();
     renderBoard();
   }
 
